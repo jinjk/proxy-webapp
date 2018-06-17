@@ -7,13 +7,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @WebFilter("/*")
 public class HeaderFilter implements Filter {
-    ConcurrentMap<String, String> headers = null;
+    private final String CHECKING_HEADER_NAME = "test-token";
+    ConcurrentMap<String, String> headers = new ConcurrentHashMap<>();;
     Cookie[] cookies = null;
     HttpSession session = null;
     @Override
@@ -25,11 +25,13 @@ public class HeaderFilter implements Filter {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) servletRequest;
         synchronized (headers) {
-            if (headers.isEmpty()) {
+            if (headers.isEmpty() && req.getHeader(CHECKING_HEADER_NAME) != null) {
                 // update headers with authenticated token/cookie
                 // TODO:
-                headers = null;
-                cookies = null;
+                headers.put(CHECKING_HEADER_NAME, req.getHeader(CHECKING_HEADER_NAME));
+                HttpSession tempSession = req.getSession(true);
+                tempSession.setAttribute("Mark", "inited in filter");
+                cookies = req.getCookies();
                 session = req.getSession();
                 filterChain.doFilter(servletRequest, servletResponse);
             }
